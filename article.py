@@ -10,6 +10,7 @@ class article(object):
         self.source = source
         self.date = date
         self.section = section
+        return
     def __repr__(self):
         return ('%s \n %s \n %s \n -- %s \n %s \n %s \n %s' % (self.headline, self.byline, self.text, self.author, self.sources, self.date, self.section))
     def export_csv(self):
@@ -17,3 +18,4 @@ class article(object):
             csvwriter = csv.writer(csvfile, delimiter=',', quotechar='\"', quoting=QUOTE_ALL)
             #csvwriter.writerow(['HEADLINE', 'BYLINE', 'TEXT', 'AUTHOR', 'SOURCE', 'DATE', 'SECTION'])
             csvwriter.writerow([self.headline, self.byline, self.text, self.author, self.source, self.date, self.section])
+        return

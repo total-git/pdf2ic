@@ -47,9 +47,16 @@ def main(argv):
     device = PDFDevice(rsrcmgr)
     # Create a PDF interpreter object.
     interpreter = PDFPageInterpreter(rsrcmgr, device)
+    text_content = []
+    continue_article = False
     for page in PDFPage.create_pages(document):
         interpreter.process_page(page)
+        layout=device.get_result()
+        text_content.append(parse_lt_objs(layout))
+
+
     
+    '''
     # Set parameters for analysis.
     laparams = LAParams()
     # Create a PDF page aggregator object.
@@ -59,6 +66,8 @@ def main(argv):
         interpreter.process_page(page)
         # receive the LTPage object for the page.
         layout = device.get_result()
+    '''
+
 if __name__ == "__main__":
     main(sys.argv[1:])
 
