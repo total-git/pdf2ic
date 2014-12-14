@@ -15,7 +15,7 @@ class article(object):
         return ('%s \n %s \n %s \n -- %s \n %s \n %s \n %s' % (self.headline, self.byline, self.text, self.author, self.sources, self.date, self.section))
     def export_csv(self):
         with open(pdfname + '.csv', 'a') as csvfile: # append to an existing file
-            csvwriter = csv.writer(csvfile, delimiter=',', quotechar='\"', quoting=QUOTE_ALL)
+            csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=QUOTE_ALL)
             #csvwriter.writerow(['HEADLINE', 'BYLINE', 'TEXT', 'AUTHOR', 'SOURCE', 'DATE', 'SECTION'])
             csvwriter.writerow([self.headline, self.byline, self.text, self.author, self.source, self.date, self.section])
         return
