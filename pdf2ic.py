@@ -9,6 +9,8 @@ from pdfminer.pdfdevice import PDFDevice
 from pdfminer.layout import LAParams
 from pdfminer.converter import PDFPageAggregator
 
+from pdfminer_layout_scanner.layout_scanner import *
+
 import sys, getopt
 
 
