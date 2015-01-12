@@ -2,3 +2,6 @@
 *.txt
 *~
 *.swp
+*.csv
+*.xml
+*.html
