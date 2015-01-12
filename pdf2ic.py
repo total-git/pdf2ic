@@ -9,19 +9,22 @@ from pdfminer.pdfdevice import PDFDevice
 from pdfminer.layout import LAParams
 from pdfminer.converter import PDFPageAggregator
 
-from pdfminer_layout_scanner.layout_scanner import *
+from pdfminer_layout_scanner import layout_scanner
 
 import sys, getopt
+
+from article import *
 
 
 def main(argv):
     infile  = ''
     outfile = ''
     password = ''
+    language = ''
     try:
-        opts, args = getopt.gnu_getopt(argv, "i:o:p:", ["ifile=","ofile=", "password="])
+        opts, args = getopt.gnu_getopt(argv, "i:o:p:l:", ["ifile=","ofile=", "password=","language="])
     except getopt.GetoptError:
-        print 'pdf2ic.py [-i] <infile> [-o <outfile>] [-p <password>]'
+        print 'pdf2ic.py [-i] <infile> [-o <outfile>] [-p <password>] [-l <language>]'
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-i", "--infile"):
@@ -30,6 +33,8 @@ def main(argv):
             outfile = arg
         elif opt in ("-p", "--password"):
             password = arg
+        elif opt in ("-l", "--language"):
+            language = arg
         if opt not in ("-o", "--outfile"): # default to pdfname.csv if no output file is given
             outfile = '.'.join(infile.split('.')[:-1] + ['csv'])
     if not infile:
@@ -51,10 +56,15 @@ def main(argv):
     interpreter = PDFPageInterpreter(rsrcmgr, device)
     text_content = []
     continue_article = False
+    """
     for page in PDFPage.create_pages(document):
         interpreter.process_page(page)
-        layout=device.get_result()
-        text_content.append(parse_lt_objs(layout))
+        # layout=device.get_result()
+        # text_content.append(parse_lt_objs(layout))
+    """
+    a = article("head","by","text")
+    print a
+    a.export_csv()
 
 
     
@@ -64,6 +74,7 @@ def main(argv):
     # Create a PDF page aggregator object.
     device = PDFPageAggregator(rsrcmgr, laparams=laparams)
     interpreter = PDFPageInterpreter(rsrcmgr, device)
+    print layout_scanner.get_pages(infile)[0]
     for page in PDFPage.create_pages(document):
         interpreter.process_page(page)
         # receive the LTPage object for the page.
