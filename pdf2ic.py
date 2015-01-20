@@ -6,7 +6,9 @@ from pdfminer.layout import LAParams
 
 import sys, getopt
 
-import xml.etree
+#import xml.etree.cElementTree as ET
+#import elementtree.ElementTree as ET
+from lxml import etree
 
 from article import *
 
@@ -39,21 +41,37 @@ def main(argv):
 
     # convert the pdf to an xml file
     xmlfilename = '.'.join(infile.split('.')[:-1] + ['xml'])
-    with open(xmlfilename, "w") as xmlfd:
+    """
+    with open(xmlfilename, "w") as xmlfd1:
         rsrcmgr = PDFResourceManager()
         laparams = LAParams()
-        device = XMLConverter(rsrcmgr, xmlfd)
+        device = XMLConverter(rsrcmgr, xmlfd1)
         interpreter = PDFPageInterpreter(rsrcmgr, device)
         with open(infile, "rb") as pdffd:
             for page in PDFPage.get_pages(pdffd):
                 # page.rotate = (page.rotate+rotation) % 360
                 interpreter.process_page(page)
-
+    """
     # parse the xml file
+    #tree = ET.parse(xmlfilename)
+    tree = etree.parse(xmlfilename)
+    doc = tree.getroot()
+    context = etree.iterparse(xmlfilename, tag='text')
+    fontsize = 0
+    for action, elem in context:
+        if elem.text:
+            print elem.text,
+            if elem.attrib['size'] != fontsize:
+                fontsize = elem.attrib['size']
+                print "\n"
+        #print elem.attrib['font'] + " " + elem.attrib['size'] + elem.text
 
+
+    """
     a = article("head","by","text")
     print a
     a.export_csv()
+    """
 
 
 if __name__ == "__main__":
