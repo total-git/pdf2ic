@@ -13,7 +13,7 @@ class article(object):
     def __repr__(self):
         return ('%s \n %s \n %s \n -- %s \n %s \n %s \n %s' % (self.headline, self.byline, self.text, self.author, self.source, self.date, self.section))
     def export_csv(self):
-        with open("foo.csv", 'a') as csvfile: # append to an existing file
+        with open('foo.csv', 'a') as csvfile: # append to an existing file
             #csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=QUOTE_ALL)
             csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|')
 
