@@ -51,32 +51,41 @@ def main(argv):
             for page in PDFPage.get_pages(pdffd):
                 # page.rotate = (page.rotate+rotation) % 360
                 interpreter.process_page(page)
+    # for some reason, xmlconverter forgets the closing </pages> tag
+    with open(xmlfilename, 'a') as xmlfd:
+        xmlfd.write('</pages>')
     '''
+
     # parse the xml file
-    #tree = ET.parse(xmlfilename)
     tree = etree.parse(xmlfilename)
     doc = tree.getroot()
     context = etree.iterparse(xmlfilename, tag='text')
     fontsizes = {}
     articles = []
     date = ''
+    currenttext = [] # String list because otherwise python will copy the string each time we concatenate something to it
+    prevfontsize = 0
+    text = [] # List of tuples containing the text and its size
     for action, elem in context:
         if elem.text:
             if elem.attrib['size'] in fontsizes:
                 fontsizes[elem.attrib['size']] += 1
             else:
                 fontsizes[elem.attrib['size']] = 1
-        #print elem.attrib['font'] + ' ' + elem.attrib['size'] + elem.text
-    textsize = sorted(fontsizes, key=fontsizes.__getitem__)[-1]
+    textsize = sorted(fontsizes, key=fontsizes.__getitem__)[-1] # the most common font size is probably the one for the article text
     root = context.root
     context = etree.iterwalk(root, tag='text')
+    # write all text snippets that have the same font size to the text list together with their font size
     for action, elem in context:
         if elem.text:
-            #print elem.attrib['size']
-            if elem.attrib['size'] == textsize:
-                print elem.text,
-    #print sorted(fontsizes.values())[::-1]
-
+            if elem.attrib['size'] == prevfontsize:
+                currenttext.append(elem.text)
+            else:
+                text.append((''.join(currenttext), elem.attrib['size']))
+                currenttext = [elem.text]
+            prevfontsize = elem.attrib['size']
+    for t,s in text:
+        print t + s
 
     '''
     a = article('head','by','text')
