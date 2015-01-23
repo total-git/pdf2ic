@@ -25,8 +25,6 @@ categories = {
     ],
 'hebrew' : [
     ],
-'arabic' : [
-    ],
 }
 
 weekdays = {
@@ -38,8 +36,6 @@ weekdays = {
     },
 'hebrew' : {
     },
-'arab' : {
-    },
 }
 
 months = {
@@ -50,8 +46,6 @@ months = {
             u'january':u'01', u'february':u'02', u'march':u'03', u'april':u'04', u'may':u'05', u'june':u'06', u'july':u'07', u'august':u'08', u'september':u'09', u'october':u'10', u'november':u'11', u'december':u'12'
             },
         'hebrew' : {
-            },
-        'arabic' : {
             },
         }
 
