@@ -1,4 +1,3 @@
-#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
 from pdfminer.pdfpage import PDFPage
@@ -8,6 +7,7 @@ from pdfminer.converter import XMLConverter
 from pdfminer.layout import LAParams
 
 import sys, getopt
+import re
 
 #import xml.etree.cElementTree as ET
 #import elementtree.ElementTree as ET
@@ -15,6 +15,9 @@ from lxml import etree
 
 from article import *
 from locale import *
+
+def most_common(lst):
+    return max(set(lst), key=lst.count)
 
 def main(argv):
     infile  = ''
@@ -48,9 +51,9 @@ def main(argv):
     loc = locale(language)
 
     # convert the pdf to an xml file
-    xmlfilename = '.'.join(infile.split('.')[:-1] + ['xml'])
+    xml_filename = '.'.join(infile.split('.')[:-1] + ['xml'])
     '''
-    with open(xmlfilename, 'w') as xmlfd1:
+    with open(xml_filename, 'w') as xmlfd1:
         rsrcmgr = PDFResourceManager()
         laparams = LAParams()
         device = XMLConverter(rsrcmgr, xmlfd1)
@@ -60,21 +63,25 @@ def main(argv):
                 # page.rotate = (page.rotate+rotation) % 360
                 interpreter.process_page(page)
     # for some reason, xmlconverter forgets the closing </pages> tag
-    with open(xmlfilename, 'a') as xmlfd:
+    with open(xml_filename, 'a') as xmlfd:
         xmlfd.write('</pages>')
     '''
 
     # parse the xml file
-    tree = etree.parse(xmlfilename)
+    tree = etree.parse(xml_filename)
     doc = tree.getroot()
-    context = etree.iterparse(xmlfilename, tag='text')
+    context = etree.iterparse(xml_filename, tag='text')
     fontsizes = {}
     articles = []
-    # date = ''
-    currenttext = [] # String list because otherwise python will copy the string each time we concatenate something to it
-    prevfontsize = 0
-    prevfontname = ""
-    completetext = [] # List of tuples containing the text and its size
+    dates = []
+    weekday = ''
+    day = ''
+    month = ''
+    year = ''
+    current_text = [] # String list because otherwise python will copy the string each time we concatenate something to it
+    prev_fontsize = 0
+    prev_fontname = ""
+    complete_text = [] # List of tuples containing the text and its size
     for action, elem in context:
         if elem.text:
             if elem.attrib['size'] in fontsizes:
@@ -87,19 +94,34 @@ def main(argv):
     # write all text snippets that have the same font size to the text list together with their font size
     for action, elem in context:
         if elem.text:
-            if elem.attrib['size'] == prevfontsize and elem.attrib['font'] == prevfontname:
-                currenttext.append(elem.text)
+            if elem.attrib['size'] == prev_fontsize and elem.attrib['font'] == prev_fontname:
+                current_text.append(elem.text)
             else:
-                completetext.append((''.join(currenttext), elem.attrib['size'], elem.attrib['font']))
-                currenttext = [elem.text]
-            prevfontsize = elem.attrib['size']
-            prevfontname = elem.attrib['font']
-    for text, size, font in completetext:
+                complete_text.append((''.join(current_text), elem.attrib['size'], elem.attrib['font']))
+                current_text = [elem.text]
+            prev_fontsize = elem.attrib['size']
+            prev_fontname = elem.attrib['font']
+    for text, size, font in complete_text:
         # find out the date
-        #if text in dateformats:
+        tmpdate = text.split()
+        tmp = re.findall(r'(?<=\s)\d{4}(?=\s)', text)
+        if tmp:
+            year = tmp[0]
+        tmp = re.findall(r'(?<=\s)\d{2}(?=\s)', text)
+        if tmp:
+            day = tmp[0]
+        for i in tmpdate:
+            if i.lower() in loc.weekdays:
+                weekday = loc.weekdays[i.lower()]
+            if i.lower() in loc.months:
+                month = loc.months[i.lower()]
+        dates.append(year+'-'+month+'-'+day+'-'+weekday)
+
         # find out the current category
         if text.lower() in loc.categories:
             category = text
+    # take the most common day and date
+    date = most_common(dates)
 
     '''
     a = article('head','by','text')

@@ -44,10 +44,10 @@ weekdays = {
 
 months = {
         'french' : {
-            u'janvier':1, u'février':2, u'mars':3, u'avril':4, u'mai':5, u'juin':6, u'juillet':7, u'août':8, u'septembre':9, u'octobre':10, u'novembre':11, u'décembre':12
+            u'janvier':u'01', u'février':u'02', u'mars':u'03', u'avril':u'04', u'mai':u'05', u'juin':u'06', u'juillet':u'07', u'août':u'08', u'septembre':u'09', u'octobre':u'10', u'novembre':u'11', u'décembre':u'12'
             },
         'english' : {
-            u'january':1, u'february':2, u'march':3, u'april':4, u'may':5, u'june':6, u'july':7, u'august':8, u'september':9, u'october':10, u'november':11, u'december':12
+            u'january':u'01', u'february':u'02', u'march':u'03', u'april':u'04', u'may':u'05', u'june':u'06', u'july':u'07', u'august':u'08', u'september':u'09', u'october':u'10', u'november':u'11', u'december':u'12'
             },
         'hebrew' : {
             },
