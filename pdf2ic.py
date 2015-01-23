@@ -1,3 +1,6 @@
+#!/usr/bin/python2
+# -*- coding: utf-8 -*-
+
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfinterp import PDFPageInterpreter
@@ -11,17 +14,17 @@ import sys, getopt
 from lxml import etree
 
 from article import *
-
+from locale import *
 
 def main(argv):
     infile  = ''
     outfile = ''
     password = ''
-    language = ''
+    language = 'english' # default value
     try:
         opts, args = getopt.gnu_getopt(argv, 'i:o:p:l:', ['infile=','outfile=', 'password=','language='])
     except getopt.GetoptError:
-        print 'pdf2ic.py [-i] <infile> [-o <outfile>] [-p <password>] [-l <language>]'
+        print 'pdf2ic.py [-i] <infile> [-o <outfile>] [-p <password>] [-l <language> (defaults to english)]'
         sys.exit(2)
     for opt, arg in opts:
         if opt in ('-i', '--infile'):
@@ -34,10 +37,15 @@ def main(argv):
             language = arg
         if opt not in ('-o', '--outfile') and infile: # default to pdfname.csv if no output file is given
             outfile = '.'.join(infile.split('.')[:-1] + ['csv'])
+    if not args:
+        print 'pdf2ic.py [-i] <infile> [-o <outfile>] [-p <password>] [-l <language>]'
+        sys.exit(2)
     if not infile: # infile given without -i switch
-        infile = argv[0]
+        infile = args[0]
         if not outfile:
             outfile = '.'.join(infile.split('.')[:-1] + ['csv'])
+    # set up a locale object from the language
+    loc = locale(language)
 
     # convert the pdf to an xml file
     xmlfilename = '.'.join(infile.split('.')[:-1] + ['xml'])
@@ -62,10 +70,11 @@ def main(argv):
     context = etree.iterparse(xmlfilename, tag='text')
     fontsizes = {}
     articles = []
-    date = ''
+    # date = ''
     currenttext = [] # String list because otherwise python will copy the string each time we concatenate something to it
     prevfontsize = 0
-    text = [] # List of tuples containing the text and its size
+    prevfontname = ""
+    completetext = [] # List of tuples containing the text and its size
     for action, elem in context:
         if elem.text:
             if elem.attrib['size'] in fontsizes:
@@ -78,14 +87,19 @@ def main(argv):
     # write all text snippets that have the same font size to the text list together with their font size
     for action, elem in context:
         if elem.text:
-            if elem.attrib['size'] == prevfontsize:
+            if elem.attrib['size'] == prevfontsize and elem.attrib['font'] == prevfontname:
                 currenttext.append(elem.text)
             else:
-                text.append((''.join(currenttext), elem.attrib['size']))
+                completetext.append((''.join(currenttext), elem.attrib['size'], elem.attrib['font']))
                 currenttext = [elem.text]
             prevfontsize = elem.attrib['size']
-    for t,s in text:
-        print t + s
+            prevfontname = elem.attrib['font']
+    for text, size, font in completetext:
+        # find out the date
+        #if text in dateformats:
+        # find out the current category
+        if text.lower() in loc.categories:
+            category = text
 
     '''
     a = article('head','by','text')
