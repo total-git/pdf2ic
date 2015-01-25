@@ -75,10 +75,13 @@ def main(argv):
 
     # will store the dates; the most commom one will be assumed to be the publishing date of the paper
     dates = []
+    date = u''
     weekday = u''
     day = u''
     month = u''
     year = u''
+
+    category = u''
 
     current_text = [] # String list because otherwise python will copy the string each time we concatenate something to it
     articles = []
@@ -90,56 +93,57 @@ def main(argv):
     tmp_text = u''
     prev_fontsize = u''
     prev_fontname = u''
+    headline = 'N/A'
+    byline = 'N/A'
 
     complete_text = [] # List of tuples containing the text and its size
 
-    read_buffer = [(None, None, None),(None, None, None),(None, None, None),(None, None, None)] # buffer containing the last 4 tuples (text, size, font)
+    read_buffer = [(None, None, None),(None, None, None),(None, None, None),(None, None, None)] # FILO buffer containing the last 4 tuples (text, size, font)
 
     # parse the xml file
     tree = etree.parse(xml_filename)
     doc = tree.getroot()
-    context = etree.iterparse(xml_filename, events=('start', 'end'), tag='text')
+    context = etree.iterparse(xml_filename, tag='text')
     for event, elem in context:
-        if event == 'end':
-            if elem.text:
-                tmp_fontsize = elem.attrib['size']
-                tmp_fontname = elem.attrib['font']
-                if tmp_fontsize in fontsizes:
-                    fontsizes[tmp_fontsize] += 1
-                    fontnames[tmp_fontname] += 1
-                else:
-                    fontsizes[tmp_fontsize] = 1
-                    fontnames[tmp_fontname] = 1
+        if elem.text:
+            tmp_fontsize = elem.attrib['size']
+            tmp_fontname = elem.attrib['font']
+            if tmp_fontsize in fontsizes:
+                fontsizes[tmp_fontsize] += 1
+                fontnames[tmp_fontname] += 1
+            else:
+                fontsizes[tmp_fontsize] = 1
+                fontnames[tmp_fontname] = 1
     article_fontsize = sorted(fontsizes, key=fontsizes.__getitem__)[-1] # the most common font size is probably the one for the article text
     article_fontname = sorted(fontnames, key=fontnames.__getitem__)[-1] # the most common font name is probably the one for the article text
-    #print fontsizes
+    # print fontsizes # DEBUG
 
     root = context.root
-    context = etree.iterwalk(root, events=('start', 'end'), tag='text') # iterwalk does the same as iterparse, but uses the in-memory tree
+    context = etree.iterwalk(root, tag='text') # iterwalk does the same as iterparse, but uses the in-memory tree
 
     # write all text snippets that have the same font size to the text list (together with their font size)
     for event, elem in context:
-        if event == 'start':
-            tmp_fontsize = elem.attrib['size']
-            tmp_fontname = elem.attrib['font']
-            if elem.text:
-                if tmp_fontsize == prev_fontsize: # same as before => add it to the current text
-                    current_text.append(elem.text)
-                else: # new font size => add the whole section to complete_text and start a new section
-                    tmp_text = u''.join(current_text)
-                    # replace the diacritics (fi, ff etc)
-                    for i,j in diacritics.iteritems():
-                        tmp_text = tmp_text.replace(i,j)
-                    # remove dashes from line endings TODO better method, because sont-ils and the likes are changed; maybe a dictionary for those words?
-                    tmp_text = tmp_text.replace(u'-', u'')
+        tmp_fontsize = elem.attrib['size']
+        tmp_fontname = elem.attrib['font']
+        if elem.text:
+            if tmp_fontsize == prev_fontsize: # same as before => add it to the current text
+                current_text.append(elem.text)
+            else: # new font size => add the whole section to complete_text and start a new section
+                tmp_text = u''.join(current_text)
+                # replace the diacritics (fi, ff etc)
+                for i,j in diacritics.iteritems():
+                    tmp_text = tmp_text.replace(i,j)
+                # remove dashes from line endings TODO better method, because sont-ils and the likes are changed; maybe a dictionary for those words?
+                tmp_text = tmp_text.replace(u'-', u'')
 
-                    complete_text.append((tmp_text, prev_fontsize, prev_fontname))
-                    current_text = [elem.text]
-                prev_fontsize = tmp_fontsize
-                prev_fontname = tmp_fontname
+                complete_text.append((tmp_text, prev_fontsize, prev_fontname))
+                current_text = [elem.text]
+            prev_fontsize = tmp_fontsize
+            prev_fontname = tmp_fontname
 
 
     # iterate over the text segments
+    article_text = ''
     for text, size, font in complete_text:
 
         # find out the date
@@ -162,14 +166,46 @@ def main(argv):
             category = text
         
         if size == article_fontsize:
-            article_text = text
             if text:
-                # append strings consiting of 1 (or 2, as in <<A) to the article text; the first letter of an article is commonly in a larger font
+                # append strings consiting of 1 (or 2, as in «A) to the article text; the first letter of an article is commonly in a larger font and therefore in another elemnt of our list
                 if text[0].lower() and len(read_buffer[3][0]) <= 2:
+                    articles.append(article(headline, byline, article_text, section=category))
                     article_text = read_buffer[3][0] + text
-            print codecs.encode(article_text, 'utf-8')
+                    # font size of previous segment is > 30 => no byline and the big segment is the headline
+                    if float(read_buffer[2][1]) > 30.0:
+                        headline = read_buffer[2][0]
+                        byline = 'N/A'
+                    # font size of the segment before that is > 30 => byline has to be in between the headline and the text
+                    elif float(read_buffer[1][1]) > 30.0:
+                        headline = read_buffer[1][0]
+                        byline = read_buffer[2][0]
+                elif float(read_buffer[3][1]) > 30.0:
+                    headline = read_buffer[3][0]
+                    byline = 'N/A'
+                    article_text = text
+                    articles.append(article(headline, byline, article_text, section=category))
+                elif float(read_buffer[2][1]) > 30.0:
+                    headline = read_buffer[2][0]
+                    byline = read_buffer[3][0]
+                    article_text = text
+                    articles.append(article(headline, byline, article_text, section=category))
+                elif float(read_buffer[1][1]) > 30.0:
+                    headline = read_buffer[1][0]
+                    byline = read_buffer[2][0]
+                    article_text = read_buffer[3][0] + '\n\n' + text
+                    articles.append(article(headline, byline, article_text, section=category))
 
-        # store the current text, size, font to the buffer
+                # look for small headlines inside the article (difference between the two font sizes is small)
+                if float(read_buffer[3][1]) < float(size) + 1 and read_buffer[2][1] == article_fontsize:
+                    article_text += '\n\n' + read_buffer[3][0] + '\n\n' + text
+                '''
+                print "-----------------"
+                print codecs.encode('HEAD: '+headline, 'utf-8') # DEBUG
+                print codecs.encode('BY: '+byline, 'utf-8') # DEBUG
+                print codecs.encode(article_text, 'utf-8') # DEBUG
+                '''
+
+        # store the current text, size, font to the buffer and pop the first element
         read_buffer.append((text,size,font))
         read_buffer.pop(0)
 
@@ -181,6 +217,19 @@ def main(argv):
     print a
     a.export_csv()
     '''
+    for i in articles:
+        print '------------------'
+        print codecs.encode(unicode(i), 'utf-8') # DEBUG
+    '''
+    print "-----------------"
+    print codecs.encode('HEAD: '+headline, 'utf-8') # DEBUG
+    print codecs.encode('BY: '+byline, 'utf-8') # DEBUG
+    print codecs.encode(article_text, 'utf-8') # DEBUG
+
+    a = article(headline, byline, article_text, date, section=category)
+    print codecs.encode(unicode(a), 'utf-8') # DEBUG
+    '''
+
 
 
 if __name__ == '__main__':

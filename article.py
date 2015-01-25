@@ -11,7 +11,7 @@ class article(object):
         self.section = section
         return
     def __repr__(self):
-        return ('%s \n %s \n %s \n -- %s \n %s \n %s \n %s' % (self.headline, self.byline, self.text, self.author, self.source, self.date, self.section))
+        return ('HEADLINE: %s \n BYLINE: %s \n TEXT: %s \n AUTHOR: %s \n SOURCE: %s \n DATE: %s \n SECTION: %s' % (self.headline, self.byline, self.text, self.author, self.source, self.date, self.section))
     def export_csv(self):
         with open('foo.csv', 'a') as csvfile: # append to an existing file
             #csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=QUOTE_ALL)
