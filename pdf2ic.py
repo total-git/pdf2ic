@@ -17,6 +17,8 @@ from lxml import etree
 from article import *
 from locale import *
 
+HEADLINE_THRESHOLD = 30.0
+
 def most_common(lst):
     return max(set(lst), key=lst.count)
 
@@ -115,7 +117,7 @@ def main(argv):
                 fontsizes[tmp_fontsize] = 1
                 fontnames[tmp_fontname] = 1
     article_fontsize = sorted(fontsizes, key=fontsizes.__getitem__)[-1] # the most common font size is probably the one for the article text
-    article_fontname = sorted(fontnames, key=fontnames.__getitem__)[-1] # the most common font name is probably the one for the article text
+    # article_fontname = sorted(fontnames, key=fontnames.__getitem__)[-1] # the most common font name is probably the one for the article text
     # print fontsizes # DEBUG
 
     root = context.root
@@ -133,7 +135,7 @@ def main(argv):
                 # replace the diacritics (fi, ff etc)
                 for i,j in diacritics.iteritems():
                     tmp_text = tmp_text.replace(i,j)
-                # remove dashes from line endings TODO better method, because sont-ils and the likes are changed; maybe a dictionary for those words?
+                # remove dashes from line endings TODO better method, because sont-ils and the likes are changed; maybe a dictionary for those words? -vous -ils
                 tmp_text = tmp_text.replace(u'-', u'')
 
                 complete_text.append((tmp_text, prev_fontsize, prev_fontname))
@@ -164,46 +166,76 @@ def main(argv):
         # find out the current category
         if text.lower() in loc.categories:
             category = text
+
+        '''
+        if text.find(u'accordé un montant') != -1:
+            print read_buffer[0][0] + read_buffer[0][1]
+            print read_buffer[1][0] + read_buffer[1][1]
+            print read_buffer[2][0] + read_buffer[2][1]
+            print read_buffer[3][0] + read_buffer[3][1]
+            print codecs.encode(text, 'utf-8') + size # DEBUG
+        '''
         
         if size == article_fontsize:
             if text:
                 # append strings consiting of 1 (or 2, as in «A) to the article text; the first letter of an article is commonly in a larger font and therefore in another elemnt of our list
-                if text[0].lower() and len(read_buffer[3][0]) <= 2:
-                    articles.append(article(headline, byline, article_text, section=category))
+                if text[0].lower() and len(read_buffer[3][0]) <= 2 and not re.search(u'\A(\s*|\d)\Z', read_buffer[3][0]):
+                    articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                     article_text = read_buffer[3][0] + text
-                    # font size of previous segment is > 30 => no byline and the big segment is the headline
-                    if float(read_buffer[2][1]) > 30.0:
+
+                    '''
+                    if article_text.find(u'leur a également') != -1: # DEBUG
+                        print read_buffer[3][1]
+                        print read_buffer[3][0]
+                        print codecs.encode(text, 'utf-8') + size # DEBUG
+                        print codecs.encode(article_text, 'utf-8') + size # DEBUG
+                    '''
+
+                    # font size of previous segment is > threshold => no byline and the big segment is the headline
+                    if float(read_buffer[2][1]) > HEADLINE_THRESHOLD:
                         headline = read_buffer[2][0]
                         byline = 'N/A'
-                    # font size of the segment before that is > 30 => byline has to be in between the headline and the text
-                    elif float(read_buffer[1][1]) > 30.0:
+                    # font size of the segment before that is > threshold => byline should be in between the headline and the text
+                    elif float(read_buffer[1][1]) > HEADLINE_THRESHOLD and len(read_buffer[1][0]) > 2:
                         headline = read_buffer[1][0]
                         byline = read_buffer[2][0]
-                elif float(read_buffer[3][1]) > 30.0:
+                elif float(read_buffer[3][1]) > HEADLINE_THRESHOLD and len(read_buffer[3][0]) > 2:
+                    articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                     headline = read_buffer[3][0]
                     byline = 'N/A'
                     article_text = text
-                    articles.append(article(headline, byline, article_text, section=category))
-                elif float(read_buffer[2][1]) > 30.0:
+                elif float(read_buffer[2][1]) > HEADLINE_THRESHOLD and len(read_buffer[2][0]) > 2:
+                    articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                     headline = read_buffer[2][0]
                     byline = read_buffer[3][0]
                     article_text = text
-                    articles.append(article(headline, byline, article_text, section=category))
-                # in interviews, the first letter doesn't seem to be in a bigger font. Also, the question is in another font.
-                elif float(read_buffer[1][1]) > 30.0:
+                # in interviews, the first letter doesn't seem to be in a bigger font. Also, the question is in another font. So the question will be in read_buffer[3][0]
+                elif float(read_buffer[1][1]) > HEADLINE_THRESHOLD and len(read_buffer[1][0]) > 2:
+                    articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                     headline = read_buffer[1][0]
                     byline = read_buffer[2][0]
                     article_text = read_buffer[3][0] + '\n\n' + text
-                    articles.append(article(headline, byline, article_text, section=category))
 
                 # look for small headlines inside the article (difference between the two font sizes is small)
-                if float(read_buffer[3][1]) < float(size) + 1 and read_buffer[2][1] == article_fontsize:
+                if float(size) < float(read_buffer[3][1]) < float(size) + 1 and read_buffer[2][1] == article_fontsize:
                     # when finding italic expressions inside the text, keep going (they normally don't end in . ? ! or :)
-                    if read_buffer[3][2].lower().find(u'italic') > 0 and not re.search(u'[\.\?!:]\s*\Z', article_text):
+                    if read_buffer[3][2].lower().find(u'italic') > 0 and not re.search(u'[\.\?!:,»]\s*\Z', article_text):
                         article_text += read_buffer[3][0] + text
                     # when finding sub-headlines, add newlines
                     else:
                         article_text += '\n\n' + read_buffer[3][0] + '\n\n' + text
+
+                # replace whitespace in wrong font sizes
+                if read_buffer[2][1] == article_fontsize and re.search(u'\A\s*\Z', read_buffer[3][0]):
+                    article_text += text
+
+                # replace some special characters that appear in wrong font sizes (at the moment only supersripts)
+                if read_buffer[2][1] == article_fontsize and read_buffer[3][0] in [u'2', u'3']:
+                    if read_buffer[3][0] == u'2':
+                        article_text += u'²' + text
+                    elif read_buffer[3][0] == u'3': 
+                        article_text += u'³' + text
+
                 '''
                 print "-----------------"
                 print codecs.encode('HEAD: '+headline, 'utf-8') # DEBUG
@@ -224,7 +256,8 @@ def main(argv):
     a.export_csv()
     '''
     for i in articles:
-        print '------------------'
+        i.date = date
+        print '------------------' # DEBUG
         print codecs.encode(unicode(i), 'utf-8') # DEBUG
     '''
     print "-----------------"
