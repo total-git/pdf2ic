@@ -39,15 +39,23 @@ weekdays = {
 }
 
 months = {
-        'french' : {
-            u'janvier':u'01', u'février':u'02', u'mars':u'03', u'avril':u'04', u'mai':u'05', u'juin':u'06', u'juillet':u'07', u'août':u'08', u'septembre':u'09', u'octobre':u'10', u'novembre':u'11', u'décembre':u'12'
-            },
-        'english' : {
-            u'january':u'01', u'february':u'02', u'march':u'03', u'april':u'04', u'may':u'05', u'june':u'06', u'july':u'07', u'august':u'08', u'september':u'09', u'october':u'10', u'november':u'11', u'december':u'12'
-            },
-        'hebrew' : {
-            },
-        }
+'french' : {
+    u'janvier':u'01', u'février':u'02', u'mars':u'03', u'avril':u'04', u'mai':u'05', u'juin':u'06', u'juillet':u'07', u'août':u'08', u'septembre':u'09', u'octobre':u'10', u'novembre':u'11', u'décembre':u'12'
+    },
+'english' : {
+    u'january':u'01', u'february':u'02', u'march':u'03', u'april':u'04', u'may':u'05', u'june':u'06', u'july':u'07', u'august':u'08', u'september':u'09', u'october':u'10', u'november':u'11', u'december':u'12'
+    },
+'hebrew' : {
+    },
+}
+
+diacritics = {
+u'ﬁ ' : u'fi',
+u'ﬀ ' : u'ff',
+u'ﬂ ' : u'fl',
+u'ﬃ ' : u'ffi',
+u'ﬄ ' : u'ffl',
+}
 
 
 class locale(object):

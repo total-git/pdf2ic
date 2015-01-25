@@ -83,59 +83,73 @@ def main(argv):
     current_text = [] # String list because otherwise python will copy the string each time we concatenate something to it
     articles = []
 
-    first_letter = u''
-
     fontsizes = {} # a dictionary for the used font sizes; will be sorted to give the most common font size
     fontnames = {} # a dictionary for the used fonts
-    prev_fontsize = 0
+    tmp_fontsize = u''
+    tmp_fontname = u''
+    tmp_text = u''
+    prev_fontsize = u''
     prev_fontname = u''
 
     complete_text = [] # List of tuples containing the text and its size
 
+    read_buffer = [(None, None, None),(None, None, None),(None, None, None),(None, None, None)] # buffer containing the last 4 tuples (text, size, font)
+
     # parse the xml file
     tree = etree.parse(xml_filename)
     doc = tree.getroot()
-    context = etree.iterparse(xml_filename, tag=u'text')
-    for action, elem in context:
-        if elem.text:
-            if elem.attrib[u'size'] in fontsizes:
-                fontsizes[elem.attrib[u'size']] += 1
-                fontnames[elem.attrib[u'font']] += 1
-            else:
-                fontsizes[elem.attrib[u'size']] = 1
-                fontnames[elem.attrib[u'font']] = 1
+    context = etree.iterparse(xml_filename, events=('start', 'end'), tag='text')
+    for event, elem in context:
+        if event == 'end':
+            if elem.text:
+                tmp_fontsize = elem.attrib['size']
+                tmp_fontname = elem.attrib['font']
+                if tmp_fontsize in fontsizes:
+                    fontsizes[tmp_fontsize] += 1
+                    fontnames[tmp_fontname] += 1
+                else:
+                    fontsizes[tmp_fontsize] = 1
+                    fontnames[tmp_fontname] = 1
     article_fontsize = sorted(fontsizes, key=fontsizes.__getitem__)[-1] # the most common font size is probably the one for the article text
-    '''
-    print sorted(fontsizes, key=fontsizes.__getitem__)
-    print fontsizes
-    for i in sorted(fontsizes, key=fontsizes.__getitem__):
-        print i, fontsizes[i]
-    for i in sorted(fontnames, key=fontnames.__getitem__):
-        print i, fontnames[i]
-    '''
+    article_fontname = sorted(fontnames, key=fontnames.__getitem__)[-1] # the most common font name is probably the one for the article text
+    #print fontsizes
+
     root = context.root
-    context = etree.iterwalk(root, tag=u'text') # iterwalk does the same as iterparse, but uses the in-memory tree
+    context = etree.iterwalk(root, events=('start', 'end'), tag='text') # iterwalk does the same as iterparse, but uses the in-memory tree
 
     # write all text snippets that have the same font size to the text list (together with their font size)
-    for action, elem in context:
-        if elem.text:
-            if elem.attrib[u'size'] == prev_fontsize and elem.attrib[u'font'] == prev_fontname:
-                current_text.append(elem.text)
-            else:
-                complete_text.append((u''.join(current_text), elem.attrib[u'size'], elem.attrib[u'font']))
-                current_text = [elem.text]
-            prev_fontsize = elem.attrib[u'size']
-            prev_fontname = elem.attrib[u'font']
+    for event, elem in context:
+        if event == 'start':
+            tmp_fontsize = elem.attrib['size']
+            tmp_fontname = elem.attrib['font']
+            if elem.text:
+                if tmp_fontsize == prev_fontsize: # same as before => add it to the current text
+                    current_text.append(elem.text)
+                else: # new font size => add the whole section to complete_text and start a new section
+                    tmp_text = u''.join(current_text)
+                    # replace the diacritics (fi, ff etc)
+                    for i,j in diacritics.iteritems():
+                        tmp_text = tmp_text.replace(i,j)
+                    # remove dashes from line endings TODO better method, because sont-ils and the likes are changed; maybe a dictionary for those words?
+                    tmp_text = tmp_text.replace(u'-', u'')
+
+                    complete_text.append((tmp_text, prev_fontsize, prev_fontname))
+                    current_text = [elem.text]
+                prev_fontsize = tmp_fontsize
+                prev_fontname = tmp_fontname
+
+
     # iterate over the text segments
     for text, size, font in complete_text:
+
         # find out the date
         tmpdate = text.split()
-        tmp = re.findall(u'(?<=\s)\d{4}(?=\s)', text)
-        if tmp:
-            year = tmp[0]
-        tmp = re.findall(u'(?<=\s)\d{2}(?=\s)', text)
-        if tmp:
-            day = tmp[0]
+        tmp_regex = re.findall(u'(?<=\s)\d{4}(?=\s)', text)
+        if tmp_regex:
+            year = tmp_regex[0]
+        tmp_regex = re.findall(u'(?<=\s)\d{2}(?=\s)', text)
+        if tmp_regex:
+            day = tmp_regex[0]
         for i in tmpdate:
             if i.lower() in loc.weekdays:
                 weekday = loc.weekdays[i.lower()]
@@ -146,19 +160,18 @@ def main(argv):
         # find out the current category
         if text.lower() in loc.categories:
             category = text
-
-        # find 1-Letter strings (first letter of an article is commonly in a larger font)
-        if len(text) <= 2:
-            first_letter = text # if what follows is an article starting with a lowercase letter, append it to the beginning
-
         
-        if float(size) == article_size:
-            print codecs.encode(text, 'utf-8')
-            #if text:
-                #print text
-                #if text[0].islower():
-                    #article_text = first_letter + text
-                    #print article_text
+        if size == article_fontsize:
+            article_text = text
+            if text:
+                # append strings consiting of 1 (or 2, as in <<A) to the article text; the first letter of an article is commonly in a larger font
+                if text[0].lower() and len(read_buffer[3][0]) <= 2:
+                    article_text = read_buffer[3][0] + text
+            print codecs.encode(article_text, 'utf-8')
+
+        # store the current text, size, font to the buffer
+        read_buffer.append((text,size,font))
+        read_buffer.pop(0)
 
     # use the most common date
     date = most_common(dates)
@@ -176,20 +189,20 @@ if __name__ == '__main__':
 
 # TODO
 '''
-replace ﬁ with fi (and reconcatenate the words like "ﬁ n")
+DONE -- replace ﬁ with fi (and reconcatenate the words like "ﬁ n")
 potentially the same problem with
 ﬀ -> ff
 ﬂ -> fl
 ﬃ -> ffi
 ﬄ -> ffl
 
-line endings
+DONE -- line endings
 
 hebrew weekdays, months and categories
 
 potentially other languages
 
-append the first letter of an article (because it is in another font size)
+DONE -- append the first letter of an article (because it is in another font size)
 
 delete xml file afterwards
 '''
