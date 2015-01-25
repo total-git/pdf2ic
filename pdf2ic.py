@@ -189,6 +189,7 @@ def main(argv):
                     byline = read_buffer[3][0]
                     article_text = text
                     articles.append(article(headline, byline, article_text, section=category))
+                # in interviews, the first letter doesn't seem to be in a bigger font. Also, the question is in another font.
                 elif float(read_buffer[1][1]) > 30.0:
                     headline = read_buffer[1][0]
                     byline = read_buffer[2][0]
@@ -197,7 +198,12 @@ def main(argv):
 
                 # look for small headlines inside the article (difference between the two font sizes is small)
                 if float(read_buffer[3][1]) < float(size) + 1 and read_buffer[2][1] == article_fontsize:
-                    article_text += '\n\n' + read_buffer[3][0] + '\n\n' + text
+                    # when finding italic expressions inside the text, keep going (they normally don't end in . ? ! or :)
+                    if read_buffer[3][2].lower().find(u'italic') > 0 and not re.search(u'[\.\?!:]\s*\Z', article_text):
+                        article_text += read_buffer[3][0] + text
+                    # when finding sub-headlines, add newlines
+                    else:
+                        article_text += '\n\n' + read_buffer[3][0] + '\n\n' + text
                 '''
                 print "-----------------"
                 print codecs.encode('HEAD: '+headline, 'utf-8') # DEBUG
