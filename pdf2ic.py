@@ -168,21 +168,18 @@ def main(argv):
             category = text
 
         '''
-        if text.find(u'accordé un montant') != -1:
-            print read_buffer[0][0] + read_buffer[0][1]
-            print read_buffer[1][0] + read_buffer[1][1]
-            print read_buffer[2][0] + read_buffer[2][1]
-            print read_buffer[3][0] + read_buffer[3][1]
-            print codecs.encode(text, 'utf-8') + size # DEBUG
+        if text.find(u'pays régi par la loi') != -1:
+            print '0:  ' + read_buffer[0][0] + read_buffer[0][1]
+            print '1:  ' + read_buffer[1][0] + read_buffer[1][1]
+            print '2:  ' + read_buffer[2][0] + read_buffer[2][1]
+            print '3:  ' + read_buffer[3][0] + read_buffer[3][1]
+            print 'text:  ' + codecs.encode(text, 'utf-8') + size # DEBUG
         '''
         
         if size == article_fontsize:
             if text:
                 # append strings consiting of 1 (or 2, as in «A) to the article text; the first letter of an article is commonly in a larger font and therefore in another elemnt of our list
-                if text[0].lower() and len(read_buffer[3][0]) <= 2 and not re.search(u'\A(\s*|\d)\Z', read_buffer[3][0]):
-                    articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
-                    article_text = read_buffer[3][0] + text
-
+                if text[0].lower() and len(read_buffer[3][0]) <= 2 and float(read_buffer[3][1]) > 20 and not re.search(u'\A(\s*|\d)\Z', read_buffer[3][0]):
                     '''
                     if article_text.find(u'leur a également') != -1: # DEBUG
                         print read_buffer[3][1]
@@ -190,15 +187,21 @@ def main(argv):
                         print codecs.encode(text, 'utf-8') + size # DEBUG
                         print codecs.encode(article_text, 'utf-8') + size # DEBUG
                     '''
-
                     # font size of previous segment is > threshold => no byline and the big segment is the headline
                     if float(read_buffer[2][1]) > HEADLINE_THRESHOLD:
+                        articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+                        article_text = read_buffer[3][0] + text
                         headline = read_buffer[2][0]
                         byline = 'N/A'
                     # font size of the segment before that is > threshold => byline should be in between the headline and the text
                     elif float(read_buffer[1][1]) > HEADLINE_THRESHOLD and len(read_buffer[1][0]) > 2:
+                        articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+                        article_text = read_buffer[3][0] + text
                         headline = read_buffer[1][0]
                         byline = read_buffer[2][0]
+                    else:
+                        articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+                        article_text += read_buffer[3][0] + text
                 elif float(read_buffer[3][1]) > HEADLINE_THRESHOLD and len(read_buffer[3][0]) > 2:
                     articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                     headline = read_buffer[3][0]
@@ -229,12 +232,9 @@ def main(argv):
                 if read_buffer[2][1] == article_fontsize and re.search(u'\A\s*\Z', read_buffer[3][0]):
                     article_text += text
 
-                # replace some special characters that appear in wrong font sizes (at the moment only supersripts)
-                if read_buffer[2][1] == article_fontsize and read_buffer[3][0] in [u'2', u'3']:
-                    if read_buffer[3][0] == u'2':
-                        article_text += u'²' + text
-                    elif read_buffer[3][0] == u'3': 
-                        article_text += u'³' + text
+                # replace some special characters that appear in wrong font sizes (at the moment superscripts: exponents, 1er (premier) / 1ère (première))
+                if read_buffer[2][1] == article_fontsize and read_buffer[3][0] in special_characters:
+                    article_text += special_characters[read_buffer[3][0]] + text
 
                 '''
                 print "-----------------"

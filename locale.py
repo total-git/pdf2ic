@@ -57,6 +57,13 @@ u'ﬃ ' : u'ffi',
 u'ﬄ ' : u'ffl',
 }
 
+special_characters = {
+u'2'   : u'²',
+u'3'   : u'³',
+u'er'  : u'er',
+u'ère' : u'ère',
+}
+
 
 class locale(object):
     def __init__(self, language='english'):
