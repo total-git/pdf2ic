@@ -59,7 +59,6 @@ def main(argv):
     xml_filename = '.'.join(infile.split('.')[:-1] + ['xml'])
 
     # convert the pdf to an xml file
-    '''
     with open(xml_filename, 'w') as xmlfd1:
         rsrcmgr = PDFResourceManager()
         laparams = LAParams()
@@ -73,7 +72,6 @@ def main(argv):
     # for some reason, xmlconverter forgets the closing </pages> tag
     with open(xml_filename, 'a') as xmlfd:
         xmlfd.write('</pages>')
-    '''
 
     # will store the dates; the most commom one will be assumed to be the publishing date of the paper
     dates = []
@@ -250,25 +248,23 @@ def main(argv):
     # use the most common date
     date = most_common(dates)
 
-    '''
-    a = article('head','by','text')
-    print a
-    a.export_csv()
-    '''
-    for i in articles:
-        i.date = date
-        print '------------------' # DEBUG
-        print codecs.encode(unicode(i), 'utf-8') # DEBUG
-    '''
-    print "-----------------"
-    print codecs.encode('HEAD: '+headline, 'utf-8') # DEBUG
-    print codecs.encode('BY: '+byline, 'utf-8') # DEBUG
-    print codecs.encode(article_text, 'utf-8') # DEBUG
-
-    a = article(headline, byline, article_text, date, section=category)
-    print codecs.encode(unicode(a), 'utf-8') # DEBUG
-    '''
-
+    # export the list of articles to a csv file
+    with open(outfile, 'a') as csvfile: # append to an existing file
+        csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|')
+        csvwriter.writerow([u'HEADLINE', u'BYLINE', u'TEXT', u'AUTHOR', u'SOURCE', u'DATE', u'SECTION'])
+        for i in articles:
+            i.date = date
+            csvwriter.writerow([
+                codecs.encode(i.headline, 'utf-8'),
+                codecs.encode(i.byline, 'utf-8'),
+                codecs.encode(i.text, 'utf-8'),
+                codecs.encode(i.author, 'utf-8'),
+                codecs.encode(i.source, 'utf-8'),
+                codecs.encode(i.date, 'utf-8'),
+                codecs.encode(i.section, 'utf-8')
+                ])
+            #print '------------------' # DEBUG
+            #print codecs.encode(unicode(i), 'utf-8') # DEBUG
 
 
 if __name__ == '__main__':
@@ -293,4 +289,8 @@ potentially other languages
 DONE -- append the first letter of an article (because it is in another font size)
 
 delete xml file afterwards
+
+use https://github.com/paxan/python-dateutil for the date
+
+DONE -- article export
 '''

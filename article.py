@@ -12,6 +12,7 @@ class article(object):
         return
     def __repr__(self):
         return ('HEADLINE: %s \n BYLINE: %s \n TEXT: %s \n AUTHOR: %s \n SOURCE: %s \n DATE: %s \n SECTION: %s' % (self.headline, self.byline, self.text, self.author, self.source, self.date, self.section))
+    '''
     def export_csv(self):
         with open('foo.csv', 'a') as csvfile: # append to an existing file
             #csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=QUOTE_ALL)
@@ -20,3 +21,4 @@ class article(object):
             #csvwriter.writerow(['HEADLINE', 'BYLINE', 'TEXT', 'AUTHOR', 'SOURCE', 'DATE', 'SECTION'])
             csvwriter.writerow([self.headline, self.byline, self.text, self.author, self.source, self.date, self.section])
         return
+    '''
