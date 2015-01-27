@@ -18,6 +18,8 @@ from article import *
 from locale import *
 
 HEADLINE_THRESHOLD = 30.0
+FIRST_LETTER_THRESHOLD = 20.0
+TOLERABLE_FONTSIZE_DIFFERENCE = 1.0
 
 def most_common(lst):
     return max(set(lst), key=lst.count)
@@ -177,7 +179,7 @@ def main(argv):
         if size == article_fontsize:
             if text:
                 # append strings consiting of 1 (or 2, as in «A) to the article text; the first letter of an article is commonly in a larger font and therefore in another elemnt of our list
-                if text[0].lower() and len(read_buffer[3][0]) <= 2 and float(read_buffer[3][1]) > 20 and not re.search(u'\A(\s*|\d)\Z', read_buffer[3][0]):
+                if text[0].lower() and len(read_buffer[3][0]) <= 2 and float(read_buffer[3][1]) > FIRST_LETTER_THRESHOLD and not re.search(u'\A(\s*|\d)\Z', read_buffer[3][0]):
                     '''
                     if article_text.find(u'leur a également') != -1: # DEBUG
                         print read_buffer[3][1]
@@ -218,7 +220,7 @@ def main(argv):
                     article_text = read_buffer[3][0] + '\n\n' + text
 
                 # look for small headlines inside the article (difference between the two font sizes is small)
-                if float(size) < float(read_buffer[3][1]) < float(size) + 1 and read_buffer[2][1] == article_fontsize:
+                if float(size) < float(read_buffer[3][1]) < float(size) + TOLERABLE_FONTSIZE_DIFFERENCE and read_buffer[2][1] == article_fontsize:
                     # when finding italic expressions inside the text, keep going (they normally don't end in . ? ! or :)
                     if read_buffer[3][2].lower().find(u'italic') > 0 and not re.search(u'[\.\?!:,»]\s*\Z', article_text):
                         article_text += read_buffer[3][0] + text
