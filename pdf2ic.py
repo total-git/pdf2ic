@@ -20,6 +20,7 @@ from locale import *
 HEADLINE_THRESHOLD = 30.0
 FIRST_LETTER_THRESHOLD = 20.0
 TOLERABLE_FONTSIZE_DIFFERENCE = 1.0
+MAX_CATEGORY_LENGTH = 15
 
 def most_common(lst):
     return max(set(lst), key=lst.count)
@@ -100,7 +101,10 @@ def main(argv):
 
     complete_text = [] # List of tuples containing the text and its size
 
-    read_buffer = [(None, None, None),(None, None, None),(None, None, None),(None, None, None)] # FILO buffer containing the last 4 tuples (text, size, font)
+    '''
+    FILO (first in last out) buffer containing the last 4 tuples (text, size, font)
+    '''
+    read_buffer = [(None, None, None),(None, None, None),(None, None, None),(None, None, None)] 
 
     # parse the xml file
     tree = etree.parse(xml_filename)
@@ -145,7 +149,7 @@ def main(argv):
 
 
     # iterate over the text segments
-    article_text = ''
+    article_text = u''
     for text, size, font in complete_text:
 
         # find out the date
@@ -164,57 +168,62 @@ def main(argv):
         dates.append(year+u'-'+month+u'-'+day+u'-'+weekday) # append it to the date list
 
         # find out the current category
-        if text.lower() in loc.categories:
-            category = text
+        if len(text) < MAX_CATEGORY_LENGTH:
+            for cat in loc.categories:
+                if cat in re.sub(u'[\W_]+', u'', text.lower()):
+                    category = cat
 
-        '''
-        if text.find(u'pays régi par la loi') != -1:
+        
+        # search for the special box thing that is sometimes used to conclude articles
+        if font == 'HLWIXK+Webdings':
+            '''
             print '0:  ' + read_buffer[0][0] + read_buffer[0][1]
             print '1:  ' + read_buffer[1][0] + read_buffer[1][1]
             print '2:  ' + read_buffer[2][0] + read_buffer[2][1]
             print '3:  ' + read_buffer[3][0] + read_buffer[3][1]
             print 'text:  ' + codecs.encode(text, 'utf-8') + size # DEBUG
-        '''
-        
+            print 'article_text:  ' + codecs.encode(article_text, 'utf-8')
+            print 'headline:  ' + codecs.encode(headline, 'utf-8')
+            print 'byline:  ' + codecs.encode(byline, 'utf-8')
+            '''
+            articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+            article_text=u''
+            headline=u'N/A'
+            byline=u'N/A'
+
         if size == article_fontsize:
             if text:
-                # append strings consiting of 1 (or 2, as in «A) to the article text; the first letter of an article is commonly in a larger font and therefore in another elemnt of our list
+                # append strings consisting of 1 (or 2, as in «A) to the article text; the first letter of an article is commonly in a larger font and therefore in another element of our list
+                # the regex checks if the character is whitespace or a digit
                 if text[0].lower() and len(read_buffer[3][0]) <= 2 and float(read_buffer[3][1]) > FIRST_LETTER_THRESHOLD and not re.search(u'\A(\s*|\d)\Z', read_buffer[3][0]):
-                    '''
-                    if article_text.find(u'leur a également') != -1: # DEBUG
-                        print read_buffer[3][1]
-                        print read_buffer[3][0]
-                        print codecs.encode(text, 'utf-8') + size # DEBUG
-                        print codecs.encode(article_text, 'utf-8') + size # DEBUG
-                    '''
-                    # font size of previous segment is > threshold => no byline and the big segment is the headline
-                    if float(read_buffer[2][1]) > HEADLINE_THRESHOLD:
-                        articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+                    # font size of previous segment is > article_fontsize and nothing before that => no byline and the big segment is the headline
+                    if float(read_buffer[2][1]) > float(article_fontsize) and float(read_buffer[1][1]) <= float(article_fontsize):
+                        # articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                         article_text = read_buffer[3][0] + text
                         headline = read_buffer[2][0]
                         byline = 'N/A'
-                    # font size of the segment before that is > threshold => byline should be in between the headline and the text
-                    elif float(read_buffer[1][1]) > HEADLINE_THRESHOLD and len(read_buffer[1][0]) > 2:
-                        articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+                    # font size of the segment before that is > threshold: byline should be in between the headline and the text
+                    elif float(read_buffer[2][1]) > float(article_fontsize) and float(read_buffer[1][1]) > float(article_fontsize):
+                        # articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                         article_text = read_buffer[3][0] + text
                         headline = read_buffer[1][0]
                         byline = read_buffer[2][0]
                     else:
-                        articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+                        # articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                         article_text += read_buffer[3][0] + text
                 elif float(read_buffer[3][1]) > HEADLINE_THRESHOLD and len(read_buffer[3][0]) > 2:
-                    articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+                    # articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                     headline = read_buffer[3][0]
                     byline = 'N/A'
                     article_text = text
                 elif float(read_buffer[2][1]) > HEADLINE_THRESHOLD and len(read_buffer[2][0]) > 2:
-                    articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+                    # articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                     headline = read_buffer[2][0]
                     byline = read_buffer[3][0]
                     article_text = text
                 # in interviews, the first letter doesn't seem to be in a bigger font. Also, the question is in another font. So the question will be in read_buffer[3][0]
                 elif float(read_buffer[1][1]) > HEADLINE_THRESHOLD and len(read_buffer[1][0]) > 2:
-                    articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
+                    # articles.append(article(headline=headline, byline=byline, text=article_text, section=category))
                     headline = read_buffer[1][0]
                     byline = read_buffer[2][0]
                     article_text = read_buffer[3][0] + '\n\n' + text
